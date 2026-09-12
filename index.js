@@ -21,11 +21,10 @@ app.listen(PORT, () => {
   console.log(`Web server listening on port ${PORT}`);
 });
 
-// --- 2. Discord Bot Setup ---
+// --- 2. Discord Bot Setup (Removed GuildMembers intent to prevent crashes) ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
   ],
 });
@@ -55,25 +54,7 @@ client.once('ready', async () => {
   await client.application.commands.set(data);
 });
 
-// --- 3. Amy Welcomes New Shoppers ---
-client.on('guildMemberAdd', async member => {
-  try {
-    const welcomeChannel = member.guild.channels.cache.find(c => c.name === 'welcome');
-    if (!welcomeChannel) return;
-
-    const amyEmbed = new EmbedBuilder()
-      .setTitle('🛒 Look who clocked in!')
-      .setDescription(`Hey **${member}**! Welcome to Cloud 9. Grab a nametag and head over to the self-roles channel to pick your character shift before Dina notices you're standing around!`)
-      .setColor(0x0055ff)
-      .setThumbnail(member.user.displayAvatarURL());
-
-    await welcomeChannel.send({ embeds: [amyEmbed] });
-  } catch (err) {
-    console.error('Failed to send welcome message:', err);
-  }
-});
-
-// --- 4. Commands & Interactivity ---
+// --- 3. Commands & Interactivity ---
 client.on('interactionCreate', async interaction => {
   try {
     // Post Self-Roles Panel Command
