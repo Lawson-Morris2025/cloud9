@@ -3,10 +3,7 @@ const {
   GatewayIntentBits, 
   ActionRowBuilder, 
   StringSelectMenuBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
   EmbedBuilder, 
-  ChannelType, 
   PermissionsBitField 
 } = require('discord.js');
 require('dotenv').config();
@@ -17,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('🛒 Cloud 9 Systems & Amy Sosa are online and running!');
+  res.send('🛒 Amy Sosa & Cloud 9 Self-Roles Bot is online!');
 });
 
 app.listen(PORT, () => {
@@ -28,127 +25,72 @@ app.listen(PORT, () => {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
   ],
 });
 
-const managedRoles = {
-  // Characters
+const characterRoles = {
   'char_amy': 'Store Manager / Amy',
   'char_jonah': 'Floor Worker / Jonah',
   'char_dina': 'Security / Dina',
   'char_glenn': 'Assistant Manager / Glenn',
   'char_mateo': 'Cloud 9 Stylist / Mateo',
   'char_garrett': 'Photo Center / Garrett',
-  // Notification Pings
   'ping_rewatch': 'Re-watch Club',
   'ping_groupwatch': 'Group Watch Party',
   'ping_announcements': 'Store Announcements'
 };
 
 client.once('ready', async () => {
-  console.log(`Cloud 9 Systems Online! Logged in as ${client.user.tag}`);
+  console.log(`Amy Sosa is on the clock! Logged in as ${client.user.tag}`);
 
   const data = [
     {
-      name: 'build-cloud9',
-      description: 'Amy Sosa wipes the store clean and builds the ultimate Superstore server architecture (Admin only)',
+      name: 'post-roles',
+      description: 'Amy posts the Cloud 9 self-role character selection panel (Admin only)',
     }
   ];
 
   await client.application.commands.set(data);
 });
 
+// --- 3. Amy Welcomes New Shoppers ---
+client.on('guildMemberAdd', async member => {
+  try {
+    const welcomeChannel = member.guild.channels.cache.find(c => c.name === 'welcome');
+    if (!welcomeChannel) return;
+
+    const amyEmbed = new EmbedBuilder()
+      .setTitle('🛒 Look who clocked in!')
+      .setDescription(`Hey **${member}**! Welcome to Cloud 9. Grab a nametag and head over to the self-roles channel to pick your character shift before Dina notices you're standing around!`)
+      .setColor(0x0055ff)
+      .setThumbnail(member.user.displayAvatarURL());
+
+    await welcomeChannel.send({ embeds: [amyEmbed] });
+  } catch (err) {
+    console.error('Failed to send welcome message:', err);
+  }
+});
+
+// --- 4. Commands & Interactivity ---
 client.on('interactionCreate', async interaction => {
   try {
-    // 1. Automated Server Building & Reset Command
-    if (interaction.isChatInputCommand() && interaction.commandName === 'build-cloud9') {
+    // Post Self-Roles Panel Command
+    if (interaction.isChatInputCommand() && interaction.commandName === 'post-roles') {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to let Amy remodel the store.', ephemeral: true });
+        return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to post the shift roles panel.', ephemeral: true });
       }
 
-      await interaction.reply({ content: '☕ Amy Sosa is clocking in, tearing down the old layout, and rebuilding Cloud 9 from scratch...', ephemeral: true });
-      const guild = interaction.guild;
-
-      // Wipe existing channels for a completely fresh build
-      const existingChannels = await guild.channels.fetch();
-      for (const [id, channel] of existingChannels) {
-        await channel.delete().catch(() => {});
-      }
-
-      // Create Categories & Channels
-      const welcomeCategory = await guild.channels.create({ name: '📢 CLOUD 9 DIRECTORY', type: ChannelType.GuildCategory });
-      const rulesChannel = await guild.channels.create({ name: 'rules-and-info', type: ChannelType.GuildText, parent: welcomeCategory.id });
-      await guild.channels.create({ name: 'welcome', type: ChannelType.GuildText, parent: welcomeCategory.id });
-      await guild.channels.create({ name: 'employee-handbook', type: ChannelType.GuildText, parent: welcomeCategory.id });
-      const setupChannel = await guild.channels.create({ name: 'employee-onboarding', type: ChannelType.GuildText, parent: welcomeCategory.id });
-
-      const floorCategory = await guild.channels.create({ name: '☁️ CLOUD 9 FLOOR', type: ChannelType.GuildCategory });
-      await guild.channels.create({ name: 'break-room', type: ChannelType.GuildText, parent: floorCategory.id });
-      await guild.channels.create({ name: 'cloud-9-memes', type: ChannelType.GuildText, parent: floorCategory.id });
-      await guild.channels.create({ name: 'the-cold-open', type: ChannelType.GuildText, parent: floorCategory.id });
-
-      const showCategory = await guild.channels.create({ name: '📺 SUPERSTORE EPISODES', type: ChannelType.GuildCategory });
-      await guild.channels.create({ name: 'season-1', type: ChannelType.GuildText, parent: showCategory.id });
-      await guild.channels.create({ name: 'season-2', type: ChannelType.GuildText, parent: showCategory.id });
-      await guild.channels.create({ name: 'season-3', type: ChannelType.GuildText, parent: showCategory.id });
-      await guild.channels.create({ name: 'season-4', type: ChannelType.GuildText, parent: showCategory.id });
-      await guild.channels.create({ name: 'season-5', type: ChannelType.GuildText, parent: showCategory.id });
-      await guild.channels.create({ name: 'season-6', type: ChannelType.GuildText, parent: showCategory.id });
-
-      const watchCategory = await guild.channels.create({ name: '🍿 WATCH PARTY STAGE', type: ChannelType.GuildCategory });
-      
-      // Watch Party Stage where only Admins can speak by default
-      await guild.channels.create({ 
-        name: '🎬 Cloud 9 Watch Party', 
-        type: ChannelType.GuildStageVoice, 
-        parent: watchCategory.id,
-        permissionOverwrites: [
-          {
-            id: guild.id,
-            deny: [PermissionsBitField.Flags.Speak], // Muted for everyone by default
-          },
-          {
-            id: guild.roles.everyone.id,
-            deny: [PermissionsBitField.Flags.Speak],
-          }
-        ]
-      });
-
-      await guild.channels.create({ 
-        name: 'The Breakroom Voice', 
-        type: ChannelType.GuildVoice, 
-        parent: watchCategory.id 
-      });
-
-      const supportCategory = await guild.channels.create({ name: '🎫 CUSTOMER SERVICE', type: ChannelType.GuildCategory });
-      const helpDeskChannel = await guild.channels.create({ name: 'help-desk', type: ChannelType.GuildText, parent: supportCategory.id });
-
-      // Populate Rules Channel
-      const rulesEmbed = new EmbedBuilder()
-        .setTitle('📜 Cloud 9 Store Rules & Conduct')
-        .setDescription('Welcome to Cloud 9! To keep our store running smoothly, please follow these policies set by corporate:')
-        .setColor(0x0055ff)
-        .addFields(
-          { name: '1. Keep it respectful', value: 'No hate speech, racism, sexism, harassment, or targeted bullying of any kind. Treat fellow shoppers and employees like family.' },
-          { name: '2. Keep channels on-topic', value: 'Post memes in the designated meme channel, keep show discussions in the correct season channels, etc.' },
-          { name: '3. No spamming or advertising', value: 'Do not flood chats, drop unauthorized invite links, or self-promote without checking with management.' },
-          { name: '4. Watch Party Etiquette', value: 'Microphones are restricted to hosts/admins in the Watch Party stage so everyone can enjoy the episodes peacefully.' }
-        )
-        .setFooter({ text: 'Failure to comply may result in a permanent shift termination by Glenn or Dina.' });
-
-      await rulesChannel.send({ embeds: [rulesEmbed] });
-
-      // Post Onboarding & Ticket Panels
       const embed = new EmbedBuilder()
-        .setTitle('🛒 Welcome to Cloud 9 - Employee Onboarding!')
-        .setDescription('Amy built the store! Use the dropdown below to choose your character identity and opt-in to watch party pings.')
+        .setTitle('🛒 Cloud 9 Employee Shift & Character Assignment')
+        .setDescription('*(Amy sighs from behind the register)* "Look, pick your character identity and notification pings from the dropdown below so we know who we are dealing with on the floor."')
         .setColor(0x0055ff)
         .setFooter({ text: 'Powered by Amy Sosa & Cloud 9 Systems' });
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('character_select')
-        .setPlaceholder('Choose your Cloud 9 identity & ping preferences...')
+        .setPlaceholder('Choose your Cloud 9 character or ping preferences...')
         .addOptions([
           { label: 'Amy Sosa (The Realist)', description: 'Exhausted manager energy', value: 'char_amy', emoji: '☕' },
           { label: 'Jonah Simms (The Activist)', description: 'Over-explaining retail logic', value: 'char_jonah', emoji: '📚' },
@@ -161,32 +103,17 @@ client.on('interactionCreate', async interaction => {
           { label: 'Store Announcements Ping', description: 'General server updates', value: 'ping_announcements', emoji: '📢' }
         ]);
 
-      const row1 = new ActionRowBuilder().addComponents(selectMenu);
+      const row = new ActionRowBuilder().addComponents(selectMenu);
 
-      const ticketEmbed = new EmbedBuilder()
-        .setTitle('🎫 Cloud 9 Customer Service & Support')
-        .setDescription('Need help, want to report corporate misconduct, or need Glenn & Myrtle to assist you? Open a ticket below!')
-        .setColor(0xffaa00);
-
-      const ticketButton = new ButtonBuilder()
-        .setCustomId('open_ticket')
-        .setLabel('Open Support Ticket')
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji('🎫');
-
-      const row2 = new ActionRowBuilder().addComponents(ticketButton);
-
-      await setupChannel.send({ embeds: [embed], components: [row1] });
-      await helpDeskChannel.send({ embeds: [ticketEmbed], components: [row2] });
-
-      return;
+      await interaction.channel.send({ embeds: [embed], components: [row] });
+      return interaction.reply({ content: 'Amy successfully posted the character self-roles panel!', ephemeral: true });
     }
 
-    // 2. Handle Role Selection (Toggleable Roles)
+    // Handle Role Selections
     if (interaction.isStringSelectMenu() && interaction.customId === 'character_select') {
       await interaction.deferReply({ ephemeral: true });
       const selectedKey = interaction.values[0];
-      const targetRoleName = managedRoles[selectedKey];
+      const targetRoleName = characterRoles[selectedKey];
 
       let role = interaction.guild.roles.cache.find(r => r.name === targetRoleName);
       
@@ -198,11 +125,11 @@ client.on('interactionCreate', async interaction => {
         });
       }
 
-      // If it's a character role, clear other character roles first so they only hold one persona
+      // If it's a character role, clear other character roles so they only hold one active persona
       if (selectedKey.startsWith('char_')) {
-        for (const key of Object.keys(managedRoles)) {
+        for (const key of Object.keys(characterRoles)) {
           if (key.startsWith('char_')) {
-            const rName = managedRoles[key];
+            const rName = characterRoles[key];
             const existingRole = interaction.guild.roles.cache.find(r => r.name === rName);
             if (existingRole && interaction.member.roles.cache.has(existingRole.id)) {
               await interaction.member.roles.remove(existingRole);
@@ -223,66 +150,8 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    // 3. Handle Ticket Creation (Glenn's Office Help Desk)
-    if (interaction.isButton() && interaction.customId === 'open_ticket') {
-      const guild = interaction.guild;
-      const member = interaction.member;
-
-      const ticketChannel = await guild.channels.create({
-        name: `ticket-${member.user.username}`,
-        type: ChannelType.GuildText,
-        permissionOverwrites: [
-          {
-            id: guild.id,
-            deny: [PermissionsBitField.Flags.ViewChannel],
-          },
-          {
-            id: member.id,
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
-          },
-          {
-            id: client.user.id,
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
-          },
-        ],
-      });
-
-      const closeButton = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('close_ticket')
-          .setLabel('Close Ticket')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🔒')
-      );
-
-      const welcomeEmbed = new EmbedBuilder()
-        .setTitle('😇 Welcome to Glenn’s Office!')
-        .setDescription(`Hello ${member}!\n\n*(In Glenn's wholesome voice)* "Welcome, welcome! Don't be shy, tell Glenn and Myrtle what's on your mind so we can help you out with a smile!"\n\nState your issue below. Click the close button when you're all finished.`);
-
-      await ticketChannel.send({ content: `${member}`, embeds: [welcomeEmbed], components: [closeButton] });
-
-      return interaction.reply({ content: `Your ticket has been created: ${ticketChannel}`, ephemeral: true });
-    }
-
-    // 4. Handle Closing Tickets
-    if (interaction.isButton() && interaction.customId === 'close_ticket') {
-      await interaction.reply({ content: 'Closing this ticket in 5 seconds...' });
-      setTimeout(async () => {
-        try {
-          await interaction.channel.delete();
-        } catch (err) {
-          console.error('Failed to delete ticket channel:', err);
-        }
-      }, 5000);
-    }
-
   } catch (error) {
     console.error('Interaction error:', error);
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content: 'An error occurred processing your shift request.' }).catch(() => {});
-    } else {
-      await interaction.reply({ content: 'An error occurred processing your shift request.', ephemeral: true }).catch(() => {});
-    }
   }
 });
 
