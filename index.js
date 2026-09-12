@@ -52,7 +52,7 @@ client.once('ready', async () => {
   const data = [
     {
       name: 'build-cloud9',
-      description: 'Amy wipes the server, creates all channels, writes the rules, and sets up separate character/self-role buttons (Admin only)',
+      description: 'Wipes and builds the Cloud 9 server with channels, rules, and separate buttons.',
     }
   ];
 
@@ -269,14 +269,14 @@ client.on('interactionCreate', async interaction => {
     // --- HANDLE TICKET CREATION ---
     if (interaction.isButton() && interaction.customId === 'open_ticket') {
       const guild = interaction.guild;
-      const member = interaction.member;
+      const previousMember = interaction.member;
 
       const ticketChannel = await guild.channels.create({
-        name: `ticket-${member.user.username}`,
+        name: `ticket-${previousMember.user.username}`,
         type: ChannelType.GuildText,
         permissionOverwrites: [
           { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: member.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
+          { id: previousMember.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
           { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
         ],
       });
@@ -287,9 +287,9 @@ client.on('interactionCreate', async interaction => {
 
       const welcomeEmbed = new EmbedBuilder()
         .setTitle('😇 Welcome to Glenn’s Office / Help Desk!')
-        .setDescription(`Hello ${member}!\n\n*(Amy sighs)* "State your issue below and we'll get it sorted out."`);
+        .setDescription(`Hello ${previousMember}!\n\n*(Amy sighs)* "State your issue below and we'll get it sorted out."`);
 
-      await ticketChannel.send({ content: `${member}`, embeds: [welcomeEmbed], components: [closeButton] });
+      await ticketChannel.send({ content: `${previousMember}`, embeds: [welcomeEmbed], components: [closeButton] });
       return interaction.reply({ content: `Your ticket has been created: ${ticketChannel}`, ephemeral: true });
     }
 
