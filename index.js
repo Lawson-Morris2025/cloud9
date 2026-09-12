@@ -2,8 +2,10 @@ const {
   Client, 
   GatewayIntentBits, 
   ActionRowBuilder, 
-  StringSelectMenuBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
   EmbedBuilder, 
+  ChannelType, 
   PermissionsBitField 
 } = require('discord.js');
 require('dotenv').config();
@@ -14,14 +16,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('🛒 Amy Sosa & Cloud 9 Self-Roles Bot is online!');
+  res.send('🛒 Amy Sosa & Cloud 9 Full Server Build Bot is online!');
 });
 
 app.listen(PORT, () => {
   console.log(`Web server listening on port ${PORT}`);
 });
 
-// --- 2. Discord Bot Setup (Removed GuildMembers intent to prevent crashes) ---
+// --- 2. Discord Bot Setup ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -29,7 +31,16 @@ const client = new Client({
   ],
 });
 
-const characterRoles = {
+const characterButtons = [
+  { id: 'char_amy', label: 'Amy Sosa', emoji: '☕', style: ButtonStyle.Primary },
+  { id: 'char_jonah', label: 'Jonah Simms', emoji: '📚', style: ButtonStyle.Secondary },
+  { id: 'char_dina', label: 'Dina Fox', emoji: '🦅', style: ButtonStyle.Danger },
+  { id: 'char_glenn', label: 'Glenn Sturgis', emoji: '😇', style: ButtonStyle.Success },
+  { id: 'char_mateo', label: 'Mateo Liwanag', emoji: '💅', style: ButtonStyle.Primary },
+  { id: 'char_garrett', label: 'Garrett Keenan', emoji: '🎧', style: ButtonStyle.Secondary }
+];
+
+const roleNames = {
   'char_amy': 'Store Manager / Amy',
   'char_jonah': 'Floor Worker / Jonah',
   'char_dina': 'Security / Dina',
@@ -46,8 +57,8 @@ client.once('ready', async () => {
 
   const data = [
     {
-      name: 'post-roles',
-      description: 'Amy posts the Cloud 9 self-role character selection panel (Admin only)',
+      name: 'build-cloud9',
+      description: 'Amy wipes the server, builds all categories, channels, and role panels (Admin only)',
     }
   ];
 
@@ -57,47 +68,138 @@ client.once('ready', async () => {
 // --- 3. Commands & Interactivity ---
 client.on('interactionCreate', async interaction => {
   try {
-    // Post Self-Roles Panel Command
-    if (interaction.isChatInputCommand() && interaction.commandName === 'post-roles') {
+    // --- FULL SERVER BUILD COMMAND ---
+    if (interaction.isChatInputCommand() && interaction.commandName === 'build-cloud9') {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to post the shift roles panel.', ephemeral: true });
+        return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to let Amy remodel the store.', ephemeral: true });
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle('🛒 Cloud 9 Employee Shift & Character Assignment')
-        .setDescription('*(Amy sighs from behind the register)* "Look, pick your character identity and notification pings from the dropdown below so we know who we are dealing with on the floor."')
+      await interaction.reply({ content: '☕ Amy Sosa is clocking in, tearing down the old layout, and rebuilding Cloud 9 from scratch...', ephemeral: true });
+      const guild = interaction.guild;
+
+      // Wipe existing channels for a clean slate
+      const existingChannels = await guild.channels.fetch();
+      for (const [id, channel] of existingChannels) {
+        await channel.delete().catch(() => {});
+      }
+
+      // --- CATEGORY 1: STORE DIRECTORY ---
+      const dirCategory = await guild.channels.create({ name: '📢 CLOUD 9 DIRECTORY', type: ChannelType.GuildCategory });
+      const announcementsChannel = await guild.channels.create({ name: 'announcements', type: ChannelType.GuildText, parent: dirCategory.id });
+      const rulesChannel = await guild.channels.create({ name: 'rules-and-info', type: ChannelType.GuildText, parent: dirCategory.id });
+      await guild.channels.create({ name: 'welcome', type: ChannelType.GuildText, parent: dirCategory.id });
+      const rolesChannel = await guild.channels.create({ name: 'employee-onboarding', type: ChannelType.GuildText, parent: dirCategory.id });
+
+      // --- CATEGORY 2: CLOUD 9 FLOOR ---
+      const floorCategory = await guild.channels.create({ name: '☁️ CLOUD 9 FLOOR', type: ChannelType.GuildCategory });
+      await guild.channels.create({ name: 'break-room', type: ChannelType.GuildText, parent: floorCategory.id });
+      await guild.channels.create({ name: 'cloud-9-memes', type: ChannelType.GuildText, parent: floorCategory.id });
+      await guild.channels.create({ name: 'the-cold-open', type: ChannelType.GuildText, parent: floorCategory.id });
+
+      // --- CATEGORY 3: SUPERSTORE EPISODES ---
+      const showCategory = await guild.channels.create({ name: '📺 SUPERSTORE EPISODES', type: ChannelType.GuildCategory });
+      await guild.channels.create({ name: 'season-1', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-2', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-3', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-4', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-5', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-6', type: ChannelType.GuildText, parent: showCategory.id });
+
+      // --- CATEGORY 4: WATCH PARTY STAGE ---
+      const watchCategory = await guild.channels.create({ name: '🍿 WATCH PARTY STAGE', type: ChannelType.GuildCategory });
+      await guild.channels.create({ 
+        name: '🎬 Cloud 9 Watch Party', 
+        type: ChannelType.GuildStageVoice, 
+        parent: watchCategory.id,
+        permissionOverwrites: [
+          {
+            id: guild.id,
+            deny: [PermissionsBitField.Flags.Speak],
+          }
+        ]
+      });
+      await guild.channels.create({ name: '🔄 Re-watch Discussion Voice', type: ChannelType.GuildVoice, parent: watchCategory.id });
+      await guild.channels.create({ name: 'The Breakroom Voice', type: ChannelType.GuildVoice, parent: watchCategory.id });
+
+      // --- CATEGORY 5: CUSTOMER SERVICE ---
+      const supportCategory = await guild.channels.create({ name: '🎫 CUSTOMER SERVICE', type: ChannelType.GuildCategory });
+      const helpDeskChannel = await guild.channels.create({ name: 'help-desk', type: ChannelType.GuildText, parent: supportCategory.id });
+      await guild.channels.create({ name: 'support-chat', type: ChannelType.GuildText, parent: supportCategory.id });
+
+      // --- POPULATE ANNOUNCEMENTS EMBED ---
+      const announcementsEmbed = new EmbedBuilder()
+        .setTitle('📢 Cloud 9 Store Announcements')
+        .setDescription('Welcome to the official announcements board! Corporate updates, event reminders, and major store news will be posted here.')
         .setColor(0x0055ff)
-        .setFooter({ text: 'Powered by Amy Sosa & Cloud 9 Systems' });
+        .setFooter({ text: 'Stay tuned for your next shift!' });
+      await announcementsChannel.send({ embeds: [announcementsEmbed] });
 
-      const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId('character_select')
-        .setPlaceholder('Choose your Cloud 9 character or ping preferences...')
-        .addOptions([
-          { label: 'Amy Sosa (The Realist)', description: 'Exhausted manager energy', value: 'char_amy', emoji: '☕' },
-          { label: 'Jonah Simms (The Activist)', description: 'Over-explaining retail logic', value: 'char_jonah', emoji: '📚' },
-          { label: 'Dina Fox (Security Chief)', description: 'Bird enthusiast & rule enforcer', value: 'char_dina', emoji: '🦅' },
-          { label: 'Glenn Sturgis (The Optimist)', description: 'Wholesome church vibes', value: 'char_glenn', emoji: '😇' },
-          { label: 'Mateo Liwanag (The Ambitious)', description: 'Serving absolute looks', value: 'char_mateo', emoji: '💅' },
-          { label: 'Garrett Keenan (The Sarcastic)', description: 'Announcement booth operator', value: 'char_garrett', emoji: '🎧' },
-          { label: 'Re-watch Club Ping', description: 'Get notified for series re-watches', value: 'ping_rewatch', emoji: '🔄' },
-          { label: 'Group Watch Party Ping', description: 'Get notified for live watch parties', value: 'ping_groupwatch', emoji: '🍿' },
-          { label: 'Store Announcements Ping', description: 'General server updates', value: 'ping_announcements', emoji: '📢' }
-        ]);
+      // --- POPULATE RULES EMBED ---
+      const rulesEmbed = new EmbedBuilder()
+        .setTitle('📜 Cloud 9 Store Rules & Conduct')
+        .setDescription('Welcome to Cloud 9! Please follow these policies:')
+        .setColor(0x0055ff)
+        .addFields(
+          { name: '1. Keep it respectful', value: 'No hate speech, harassment, or targeted bullying.' },
+          { name: '2. Keep channels on-topic', value: 'Post memes in the designated meme channel, show talk in seasons, etc.' },
+          { name: '3. No spamming', value: 'Do not flood chats or drop unauthorized invite links.' }
+        );
+      await rulesChannel.send({ embeds: [rulesEmbed] });
 
-      const row = new ActionRowBuilder().addComponents(selectMenu);
+      // --- POPULATE CHARACTER SELECT BUTTONS (Row 1 & Row 2) ---
+      const charEmbed1 = new EmbedBuilder()
+        .setTitle('🛒 Cloud 9 Employee Shift - Character Selection')
+        .setDescription('*(Amy sighs)* "Click a button below to pick your character shift nametag. You can wear one main character at a time!"')
+        .setColor(0x0055ff);
 
-      await interaction.channel.send({ embeds: [embed], components: [row] });
-      return interaction.reply({ content: 'Amy successfully posted the character self-roles panel!', ephemeral: true });
+      const rowChar1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_amy').setLabel('Amy Sosa').setStyle(ButtonStyle.Primary).setEmoji('☕'),
+        new ButtonBuilder().setCustomId('char_jonah').setLabel('Jonah Simms').setStyle(ButtonStyle.Secondary).setEmoji('📚'),
+        new ButtonBuilder().setCustomId('char_dina').setLabel('Dina Fox').setStyle(ButtonStyle.Danger).setEmoji('🦅')
+      );
+
+      const rowChar2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_glenn').setLabel('Glenn Sturgis').setStyle(ButtonStyle.Success).setEmoji('😇'),
+        new ButtonBuilder().setCustomId('char_mateo').setLabel('Mateo Liwanag').setStyle(ButtonStyle.Primary).setEmoji('💅'),
+        new ButtonBuilder().setCustomId('char_garrett').setLabel('Garrett Keenan').setStyle(ButtonStyle.Secondary).setEmoji('🎧')
+      );
+
+      await rolesChannel.send({ embeds: [charEmbed1], components: [rowChar1, rowChar2] });
+
+      // --- POPULATE NOTIFICATION PINGS PANEL (Row 3) ---
+      const pingEmbed = new EmbedBuilder()
+        .setTitle('🔔 Cloud 9 Notification Roles')
+        .setDescription('Click below to toggle your notification pings for watch parties and store announcements.')
+        .setColor(0x00aa00);
+
+      const rowPings = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ping_rewatch').setLabel('Re-watch Club').setStyle(ButtonStyle.Secondary).setEmoji('🔄'),
+        new ButtonBuilder().setCustomId('ping_groupwatch').setLabel('Group Watch Party').setStyle(ButtonStyle.Secondary).setEmoji('🍿'),
+        new ButtonBuilder().setCustomId('ping_announcements').setLabel('Store Announcements').setStyle(ButtonStyle.Secondary).setEmoji('📢')
+      );
+
+      await rolesChannel.send({ embeds: [pingEmbed], components: [rowPings] });
+
+      // --- POPULATE HELP DESK PANEL ---
+      const ticketEmbed = new EmbedBuilder()
+        .setTitle('🎫 Cloud 9 Customer Service & Support Desk')
+        .setDescription('Need help or have a complaint? Click the button below to open a private ticket.')
+        .setColor(0xffaa00);
+
+      const ticketButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('open_ticket').setLabel('Open Support Ticket').setStyle(ButtonStyle.Primary).setEmoji('🎫')
+      );
+
+      await helpDeskChannel.send({ embeds: [ticketEmbed], components: [ticketButton] });
+      return;
     }
 
-    // Handle Role Selections
-    if (interaction.isStringSelectMenu() && interaction.customId === 'character_select') {
+    // --- HANDLE BUTTON CLICKS (Characters & Pings) ---
+    if (interaction.isButton() && interaction.customId.startsWith('char_')) {
       await interaction.deferReply({ ephemeral: true });
-      const selectedKey = interaction.values[0];
-      const targetRoleName = characterRoles[selectedKey];
-
+      const targetRoleName = roleNames[interaction.customId];
       let role = interaction.guild.roles.cache.find(r => r.name === targetRoleName);
-      
+
       if (!role) {
         role = await interaction.guild.roles.create({
           name: targetRoleName,
@@ -106,29 +208,80 @@ client.on('interactionCreate', async interaction => {
         });
       }
 
-      // If it's a character role, clear other character roles so they only hold one active persona
-      if (selectedKey.startsWith('char_')) {
-        for (const key of Object.keys(characterRoles)) {
-          if (key.startsWith('char_')) {
-            const rName = characterRoles[key];
-            const existingRole = interaction.guild.roles.cache.find(r => r.name === rName);
-            if (existingRole && interaction.member.roles.cache.has(existingRole.id)) {
-              await interaction.member.roles.remove(existingRole);
-            }
+      // Remove other character roles so they only hold one active persona
+      for (const key of Object.keys(roleNames)) {
+        if (key.startsWith('char_')) {
+          const rName = roleNames[key];
+          const existingRole = interaction.guild.roles.cache.find(r => r.name === rName);
+          if (existingRole && interaction.member.roles.cache.has(existingRole.id)) {
+            await interaction.member.roles.remove(existingRole);
           }
         }
-        await interaction.member.roles.add(role);
-        return interaction.editReply({ content: `Shift assigned! You are now rocking the character role: **${targetRoleName}**.` });
-      } else {
-        // Toggle notification roles
-        if (interaction.member.roles.cache.has(role.id)) {
-          await interaction.member.roles.remove(role);
-          return interaction.editReply({ content: `Opted out of **${targetRoleName}** notifications.` });
-        } else {
-          await interaction.member.roles.add(role);
-          return interaction.editReply({ content: `You are now signed up for **${targetRoleName}** notifications!` });
-        }
       }
+
+      await interaction.member.roles.add(role);
+      return interaction.editReply({ content: `Shift assigned! You are now rocking the character role: **${targetRoleName}**.` });
+    }
+
+    if (interaction.isButton() && interaction.customId.startsWith('ping_')) {
+      await interaction.deferReply({ ephemeral: true });
+      const targetRoleName = roleNames[interaction.customId];
+      let role = interaction.guild.roles.cache.find(r => r.name === targetRoleName);
+
+      if (!role) {
+        role = await interaction.guild.roles.create({
+          name: targetRoleName,
+          color: 'Random',
+          reason: 'Cloud 9 Automated Role Setup'
+        });
+      }
+
+      if (interaction.member.roles.cache.has(role.id)) {
+        await interaction.member.roles.remove(role);
+        return interaction.editReply({ content: `Opted out of **${targetRoleName}** notifications.` });
+      } else {
+        await interaction.member.roles.add(role);
+        return interaction.editReply({ content: `You are now signed up for **${targetRoleName}** notifications!` });
+      }
+    }
+
+    // --- HANDLE TICKET CREATION ---
+    if (interaction.isButton() && interaction.customId === 'open_ticket') {
+      const guild = interaction.guild;
+      const member = interaction.member;
+
+      const ticketChannel = await guild.channels.create({
+        name: `ticket-${member.user.username}`,
+        type: ChannelType.GuildText,
+        permissionOverwrites: [
+          { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: member.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
+          { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+        ],
+      });
+
+      const closeButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('close_ticket').setLabel('Close Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+      );
+
+      const welcomeEmbed = new EmbedBuilder()
+        .setTitle('😇 Welcome to Glenn’s Office / Help Desk!')
+        .setDescription(`Hello ${member}!\n\n*(Amy sighs)* "State your issue below and we'll get it sorted out."`);
+
+      await ticketChannel.send({ content: `${member}`, embeds: [welcomeEmbed], components: [closeButton] });
+      return interaction.reply({ content: `Your ticket has been created: ${ticketChannel}`, ephemeral: true });
+    }
+
+    // --- HANDLE CLOSING TICKETS ---
+    if (interaction.isButton() && interaction.customId === 'close_ticket') {
+      await interaction.reply({ content: 'Closing this ticket in 5 seconds...' });
+      setTimeout(async () => {
+        try {
+          await interaction.channel.delete();
+        } catch (err) {
+          console.error('Failed to delete ticket channel:', err);
+        }
+      }, 5000);
     }
 
   } catch (error) {
