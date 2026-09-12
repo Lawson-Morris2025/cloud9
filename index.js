@@ -24,13 +24,11 @@ app.listen(PORT, () => {
   console.log(`Web server listening on port ${PORT}`);
 });
 
-// --- 2. Discord Bot Setup ---
+// --- 2. Discord Bot Setup (Safe Intents Only) ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
   ],
 });
 
@@ -188,7 +186,7 @@ client.on('interactionCreate', async interaction => {
         .setTitle('🛒 Myrtle’s Help Desk')
         .setDescription(`Hello! Myrtle or another staff member will be with you shortly. State your issue below.\n\n*(Click the close button when you are finished)*`);
 
-      await ticketChannel.send({ content: `${member}`, embeds: [welcomeEmbed], components: [closeButton] });
+      await ticketChannel.send({ content: `${member}`, embeds: [welcomeEmbed], components: [closeButton]]);
 
       return interaction.reply({ content: `Your ticket has been created: ${ticketChannel}`, ephemeral: true });
     }
