@@ -68,7 +68,7 @@ client.on('interactionCreate', async interaction => {
         return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to let Amy remodel the store.', ephemeral: true });
       }
 
-      await interaction.reply({ content: '☕ Amy Sosa is clocking in, wiping the old layout, and fully building out the server, channels, rules, and individual buttons...', ephemeral: true });
+      await interaction.reply({ content: '☕ Amy Sosa is clocking in, wiping the old layout, building channels, and writing posts...', ephemeral: true });
       const guild = interaction.guild;
 
       // Wipe existing channels for a clean slate
@@ -76,6 +76,9 @@ client.on('interactionCreate', async interaction => {
       for (const [id, channel] of existingChannels) {
         await channel.delete().catch(() => {});
       }
+
+      // Helper function to pause briefly so Discord channels register before sending messages
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
       // --- CATEGORY 1: STORE DIRECTORY ---
       const dirCategory = await guild.channels.create({ name: '📢 CLOUD 9 DIRECTORY', type: ChannelType.GuildCategory });
@@ -119,6 +122,9 @@ client.on('interactionCreate', async interaction => {
       const supportCategory = await guild.channels.create({ name: '🎫 CUSTOMER SERVICE', type: ChannelType.GuildCategory });
       const helpDeskChannel = await guild.channels.create({ name: 'help-desk', type: ChannelType.GuildText, parent: supportCategory.id });
       await guild.channels.create({ name: 'support-chat', type: ChannelType.GuildText, parent: supportCategory.id });
+
+      // Wait 1.5 seconds to ensure Discord fully registers the new channels
+      await delay(1500);
 
       // --- 1. WRITE INTO THE ANNOUNCEMENTS CHANNEL ---
       const announcementsEmbed = new EmbedBuilder()
