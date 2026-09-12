@@ -24,7 +24,7 @@ app.listen(PORT, () => {
   console.log(`Web server listening on port ${PORT}`);
 });
 
-// --- 2. Discord Bot Setup (Safe Intents Only) ---
+// --- 2. Discord Bot Setup ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -32,13 +32,18 @@ const client = new Client({
   ],
 });
 
-const characterRoles = {
+const managedRoles = {
+  // Characters
   'char_amy': 'Store Manager / Amy',
   'char_jonah': 'Floor Worker / Jonah',
   'char_dina': 'Security / Dina',
   'char_glenn': 'Assistant Manager / Glenn',
   'char_mateo': 'Cloud 9 Stylist / Mateo',
-  'char_garrett': 'Photo Center / Garrett'
+  'char_garrett': 'Photo Center / Garrett',
+  // Notification Pings
+  'ping_rewatch': 'Re-watch Club',
+  'ping_groupwatch': 'Group Watch Party',
+  'ping_announcements': 'Store Announcements'
 };
 
 client.once('ready', async () => {
@@ -47,7 +52,7 @@ client.once('ready', async () => {
   const data = [
     {
       name: 'build-cloud9',
-      description: 'Amy Sosa builds the entire Superstore server channels and panels (Admin only)',
+      description: 'Amy Sosa wipes the store clean and builds the ultimate Superstore server architecture (Admin only)',
     }
   ];
 
@@ -56,56 +61,91 @@ client.once('ready', async () => {
 
 client.on('interactionCreate', async interaction => {
   try {
-    // 1. Automated Server Building Command
+    // 1. Automated Server Building & Reset Command
     if (interaction.isChatInputCommand() && interaction.commandName === 'build-cloud9') {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to let Amy build the store.', ephemeral: true });
+        return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to let Amy remodel the store.', ephemeral: true });
       }
 
-      await interaction.reply({ content: '☕ Amy Sosa is clocking in and setting up Cloud 9... Building channels now!', ephemeral: true });
+      await interaction.reply({ content: '☕ Amy Sosa is clocking in, tearing down the old layout, and rebuilding Cloud 9 from scratch...', ephemeral: true });
       const guild = interaction.guild;
 
+      // Wipe existing channels for a completely fresh build
+      const existingChannels = await guild.channels.fetch();
+      for (const [id, channel] of existingChannels) {
+        await channel.delete().catch(() => {});
+      }
+
       // Create Categories & Channels
-      const welcomeCategory = await guild.channels.create({ name: '📢 STORE DIRECTORY', type: ChannelType.GuildCategory });
-      await guild.channels.create({ name: 'rules-and-info', type: ChannelType.GuildText, parent: welcomeCategory.id });
+      const welcomeCategory = await guild.channels.create({ name: '📢 CLOUD 9 DIRECTORY', type: ChannelType.GuildCategory });
+      await guild.channels.create({ name: 'welcome', type: ChannelType.GuildText, parent: welcomeCategory.id });
+      await guild.channels.create({ name: 'employee-handbook', type: ChannelType.GuildText, parent: welcomeCategory.id });
       const setupChannel = await guild.channels.create({ name: 'employee-onboarding', type: ChannelType.GuildText, parent: welcomeCategory.id });
 
-      const mainCategory = await guild.channels.create({ name: '☁️ CLOUD 9 FLOOR', type: ChannelType.GuildCategory });
-      await guild.channels.create({ name: 'break-room', type: ChannelType.GuildText, parent: mainCategory.id });
-      await guild.channels.create({ name: 'cloud-9-memes', type: ChannelType.GuildText, parent: mainCategory.id });
-      await guild.channels.create({ name: 'the-cold-open', type: ChannelType.GuildText, parent: mainCategory.id });
+      const floorCategory = await guild.channels.create({ name: '☁️ CLOUD 9 FLOOR', type: ChannelType.GuildCategory });
+      await guild.channels.create({ name: 'break-room', type: ChannelType.GuildText, parent: floorCategory.id });
+      await guild.channels.create({ name: 'cloud-9-memes', type: ChannelType.GuildText, parent: floorCategory.id });
+      await guild.channels.create({ name: 'the-cold-open', type: ChannelType.GuildText, parent: floorCategory.id });
 
-      const showCategory = await guild.channels.create({ name: '📺 THE SHOW', type: ChannelType.GuildCategory });
-      await guild.channels.create({ name: 'episode-discussion', type: ChannelType.GuildText, parent: showCategory.id });
+      const showCategory = await guild.channels.create({ name: '📺 SUPERSTORE EPISODES', type: ChannelType.GuildCategory });
+      await guild.channels.create({ name: 'season-1', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-2', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-3', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-4', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-5', type: ChannelType.GuildText, parent: showCategory.id });
+      await guild.channels.create({ name: 'season-6', type: ChannelType.GuildText, parent: showCategory.id });
 
-      const voiceCategory = await guild.channels.create({ name: '🎧 BREAKROOM VOICE', type: ChannelType.GuildCategory });
-      await guild.channels.create({ name: 'The Breakroom', type: ChannelType.GuildVoice, parent: voiceCategory.id });
-      await guild.channels.create({ name: 'Photo Centre', type: ChannelType.GuildVoice, parent: voiceCategory.id });
+      const watchCategory = await guild.channels.create({ name: '🍿 WATCH PARTY STAGE', type: ChannelType.GuildCategory });
+      
+      // Stage Channel where mics are muted by default for audience members
+      await guild.channels.create({ 
+        name: '🎬 Cloud 9 Watch Party', 
+        type: ChannelType.GuildStageVoice, 
+        parent: watchCategory.id,
+        permissionOverwrites: [
+          {
+            id: guild.id,
+            deny: [PermissionsBitField.Flags.Speak], // Muted for everyone by default
+          }
+        ]
+      });
 
-      // Post Onboarding & Ticket Panels into the setup channel
+      await guild.channels.create({ 
+        name: 'The Breakroom Voice', 
+        type: ChannelType.GuildVoice, 
+        parent: watchCategory.id 
+      });
+
+      const supportCategory = await guild.channels.create({ name: '🎫 CUSTOMER SERVICE', type: ChannelType.GuildCategory });
+      const helpDeskChannel = await guild.channels.create({ name: 'help-desk', type: ChannelType.GuildText, parent: supportCategory.id });
+
+      // Post Onboarding & Ticket Panels
       const embed = new EmbedBuilder()
         .setTitle('🛒 Welcome to Cloud 9 - Employee Onboarding!')
-        .setDescription('Amy built the store! Use the dropdown below to choose your character role and customize your experience.')
+        .setDescription('Amy built the store! Use the dropdown below to choose your character identity and opt-in to watch party pings.')
         .setColor(0x0055ff)
         .setFooter({ text: 'Powered by Amy Sosa & Cloud 9 Systems' });
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('character_select')
-        .setPlaceholder('Choose your Cloud 9 identity...')
+        .setPlaceholder('Choose your Cloud 9 identity & ping preferences...')
         .addOptions([
           { label: 'Amy Sosa (The Realist)', description: 'Exhausted manager energy', value: 'char_amy', emoji: '☕' },
           { label: 'Jonah Simms (The Activist)', description: 'Over-explaining retail logic', value: 'char_jonah', emoji: '📚' },
           { label: 'Dina Fox (Security Chief)', description: 'Bird enthusiast & rule enforcer', value: 'char_dina', emoji: '🦅' },
           { label: 'Glenn Sturgis (The Optimist)', description: 'Wholesome church vibes', value: 'char_glenn', emoji: '😇' },
           { label: 'Mateo Liwanag (The Ambitious)', description: 'Serving absolute looks', value: 'char_mateo', emoji: '💅' },
-          { label: 'Garrett Keenan (The Sarcastic)', description: 'Announcement booth operator', value: 'char_garrett', emoji: '🎧' }
+          { label: 'Garrett Keenan (The Sarcastic)', description: 'Announcement booth operator', value: 'char_garrett', emoji: '🎧' },
+          { label: 'Re-watch Club Ping', description: 'Get notified for series re-watches', value: 'ping_rewatch', emoji: '🔄' },
+          { label: 'Group Watch Party Ping', description: 'Get notified for live watch parties', value: 'ping_groupwatch', emoji: '🍿' },
+          { label: 'Store Announcements Ping', description: 'General server updates', value: 'ping_announcements', emoji: '📢' }
         ]);
 
       const row1 = new ActionRowBuilder().addComponents(selectMenu);
 
       const ticketEmbed = new EmbedBuilder()
         .setTitle('🎫 Cloud 9 Customer Service & Support')
-        .setDescription('Need help, want to report an issue, or need Myrtle to assist you? Open a ticket below!')
+        .setDescription('Need help, want to report corporate misconduct, or need Myrtle to assist you? Open a ticket below!')
         .setColor(0xffaa00);
 
       const ticketButton = new ButtonBuilder()
@@ -117,16 +157,16 @@ client.on('interactionCreate', async interaction => {
       const row2 = new ActionRowBuilder().addComponents(ticketButton);
 
       await setupChannel.send({ embeds: [embed], components: [row1] });
-      await setupChannel.send({ embeds: [ticketEmbed], components: [row2] });
+      await helpDeskChannel.send({ embeds: [ticketEmbed], components: [row2] });
 
       return;
     }
 
-    // 2. Handle Character Selection (Self-Roles)
+    // 2. Handle Role Selection (Toggleable Roles)
     if (interaction.isStringSelectMenu() && interaction.customId === 'character_select') {
       await interaction.deferReply({ ephemeral: true });
       const selectedKey = interaction.values[0];
-      const targetRoleName = characterRoles[selectedKey];
+      const targetRoleName = managedRoles[selectedKey];
 
       let role = interaction.guild.roles.cache.find(r => r.name === targetRoleName);
       
@@ -134,20 +174,33 @@ client.on('interactionCreate', async interaction => {
         role = await interaction.guild.roles.create({
           name: targetRoleName,
           color: 'Random',
-          reason: 'Cloud 9 Automated Character Role Setup'
+          reason: 'Cloud 9 Automated Role Setup'
         });
       }
 
-      for (const key of Object.keys(characterRoles)) {
-        const rName = characterRoles[key];
-        const existingRole = interaction.guild.roles.cache.find(r => r.name === rName);
-        if (existingRole && interaction.member.roles.cache.has(existingRole.id)) {
-          await interaction.member.roles.remove(existingRole);
+      // If it's a character role, clear other character roles first so they only hold one persona
+      if (selectedKey.startsWith('char_')) {
+        for (const key of Object.keys(managedRoles)) {
+          if (key.startsWith('char_')) {
+            const rName = managedRoles[key];
+            const existingRole = interaction.guild.roles.cache.find(r => r.name === rName);
+            if (existingRole && interaction.member.roles.cache.has(existingRole.id)) {
+              await interaction.member.roles.remove(existingRole);
+            }
+          }
+        }
+        await interaction.member.roles.add(role);
+        return interaction.editReply({ content: `Shift assigned! You are now rocking the character role: **${targetRoleName}**.` });
+      } else {
+        // Toggle notification roles
+        if (interaction.member.roles.cache.has(role.id)) {
+          await interaction.member.roles.remove(role);
+          return interaction.editReply({ content: `Opted out of **${targetRoleName}** notifications.` });
+        } else {
+          await interaction.member.roles.add(role);
+          return interaction.editReply({ content: `You are now signed up for **${targetRoleName}** notifications!` });
         }
       }
-
-      await interaction.member.roles.add(role);
-      return interaction.editReply({ content: `Shift assigned! You are now rocking the role: **${targetRoleName}**.` });
     }
 
     // 3. Handle Ticket Creation
@@ -208,7 +261,7 @@ client.on('interactionCreate', async interaction => {
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ content: 'An error occurred processing your shift request.' }).catch(() => {});
     } else {
-      await interaction.reply({ content: 'An error occurred processing your shift request.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: 'An errorurred processing your shift request.', ephemeral: true }).catch(() => {});
     }
   }
 });
