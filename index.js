@@ -78,6 +78,7 @@ client.on('interactionCreate', async interaction => {
 
       // Create Categories & Channels
       const welcomeCategory = await guild.channels.create({ name: '📢 CLOUD 9 DIRECTORY', type: ChannelType.GuildCategory });
+      const rulesChannel = await guild.channels.create({ name: 'rules-and-info', type: ChannelType.GuildText, parent: welcomeCategory.id });
       await guild.channels.create({ name: 'welcome', type: ChannelType.GuildText, parent: welcomeCategory.id });
       await guild.channels.create({ name: 'employee-handbook', type: ChannelType.GuildText, parent: welcomeCategory.id });
       const setupChannel = await guild.channels.create({ name: 'employee-onboarding', type: ChannelType.GuildText, parent: welcomeCategory.id });
@@ -97,7 +98,7 @@ client.on('interactionCreate', async interaction => {
 
       const watchCategory = await guild.channels.create({ name: '🍿 WATCH PARTY STAGE', type: ChannelType.GuildCategory });
       
-      // Stage Channel where mics are muted by default for audience members
+      // Watch Party Stage where only Admins can speak by default
       await guild.channels.create({ 
         name: '🎬 Cloud 9 Watch Party', 
         type: ChannelType.GuildStageVoice, 
@@ -106,6 +107,10 @@ client.on('interactionCreate', async interaction => {
           {
             id: guild.id,
             deny: [PermissionsBitField.Flags.Speak], // Muted for everyone by default
+          },
+          {
+            id: guild.roles.everyone.id,
+            deny: [PermissionsBitField.Flags.Speak],
           }
         ]
       });
@@ -118,6 +123,21 @@ client.on('interactionCreate', async interaction => {
 
       const supportCategory = await guild.channels.create({ name: '🎫 CUSTOMER SERVICE', type: ChannelType.GuildCategory });
       const helpDeskChannel = await guild.channels.create({ name: 'help-desk', type: ChannelType.GuildText, parent: supportCategory.id });
+
+      // Populate Rules Channel
+      const rulesEmbed = new EmbedBuilder()
+        .setTitle('📜 Cloud 9 Store Rules & Conduct')
+        .setDescription('Welcome to Cloud 9! To keep our store running smoothly, please follow these policies set by corporate:')
+        .setColor(0x0055ff)
+        .addFields(
+          { name: '1. Keep it respectful', value: 'No hate speech, racism, sexism, harassment, or targeted bullying of any kind. Treat fellow shoppers and employees like family.' },
+          { name: '2. Keep channels on-topic', value: 'Post memes in the designated meme channel, keep show discussions in the correct season channels, etc.' },
+          { name: '3. No spamming or advertising', value: 'Do not flood chats, drop unauthorized invite links, or self-promote without checking with management.' },
+          { name: '4. Watch Party Etiquette', value: 'Microphones are restricted to hosts/admins in the Watch Party stage so everyone can enjoy the episodes peacefully.' }
+        )
+        .setFooter({ text: 'Failure to comply may result in a permanent shift termination by Glenn or Dina.' });
+
+      await rulesChannel.send({ embeds: [rulesEmbed] });
 
       // Post Onboarding & Ticket Panels
       const embed = new EmbedBuilder()
@@ -145,7 +165,7 @@ client.on('interactionCreate', async interaction => {
 
       const ticketEmbed = new EmbedBuilder()
         .setTitle('🎫 Cloud 9 Customer Service & Support')
-        .setDescription('Need help, want to report corporate misconduct, or need Myrtle to assist you? Open a ticket below!')
+        .setDescription('Need help, want to report corporate misconduct, or need Glenn & Myrtle to assist you? Open a ticket below!')
         .setColor(0xffaa00);
 
       const ticketButton = new ButtonBuilder()
@@ -203,7 +223,7 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    // 3. Handle Ticket Creation
+    // 3. Handle Ticket Creation (Glenn's Office Help Desk)
     if (interaction.isButton() && interaction.customId === 'open_ticket') {
       const guild = interaction.guild;
       const member = interaction.member;
@@ -236,8 +256,8 @@ client.on('interactionCreate', async interaction => {
       );
 
       const welcomeEmbed = new EmbedBuilder()
-        .setTitle('🛒 Myrtle’s Help Desk')
-        .setDescription(`Hello! Myrtle or another staff member will be with you shortly. State your issue below.\n\n*(Click the close button when you are finished)*`);
+        .setTitle('😇 Welcome to Glenn’s Office!')
+        .setDescription(`Hello ${member}!\n\n*(In Glenn's wholesome voice)* "Welcome, welcome! Don't be shy, tell Glenn and Myrtle what's on your mind so we can help you out with a smile!"\n\nState your issue below. Click the close button when you're all finished.`);
 
       await ticketChannel.send({ content: `${member}`, embeds: [welcomeEmbed], components: [closeButton] });
 
@@ -261,7 +281,7 @@ client.on('interactionCreate', async interaction => {
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ content: 'An error occurred processing your shift request.' }).catch(() => {});
     } else {
-      await interaction.reply({ content: 'An errorurred processing your shift request.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: 'An error occurred processing your shift request.', ephemeral: true }).catch(() => {});
     }
   }
 });
