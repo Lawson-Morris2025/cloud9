@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('🛒 Amy Sosa & Cloud 9 Full Server Build Bot is online!');
+  res.send('🛒 Amy Sosa & Cloud 9 Server Builder Bot is online!');
 });
 
 app.listen(PORT, () => {
@@ -31,22 +31,16 @@ const client = new Client({
   ],
 });
 
-const characterButtons = [
-  { id: 'char_amy', label: 'Amy Sosa', emoji: '☕', style: ButtonStyle.Primary },
-  { id: 'char_jonah', label: 'Jonah Simms', emoji: '📚', style: ButtonStyle.Secondary },
-  { id: 'char_dina', label: 'Dina Fox', emoji: '🦅', style: ButtonStyle.Danger },
-  { id: 'char_glenn', label: 'Glenn Sturgis', emoji: '😇', style: ButtonStyle.Success },
-  { id: 'char_mateo', label: 'Mateo Liwanag', emoji: '💅', style: ButtonStyle.Primary },
-  { id: 'char_garrett', label: 'Garrett Keenan', emoji: '🎧', style: ButtonStyle.Secondary }
-];
-
 const roleNames = {
+  // Characters (Each gets their own separate button)
   'char_amy': 'Store Manager / Amy',
   'char_jonah': 'Floor Worker / Jonah',
   'char_dina': 'Security / Dina',
   'char_glenn': 'Assistant Manager / Glenn',
   'char_mateo': 'Cloud 9 Stylist / Mateo',
   'char_garrett': 'Photo Center / Garrett',
+  
+  // Notification Pings (Each gets their own separate button)
   'ping_rewatch': 'Re-watch Club',
   'ping_groupwatch': 'Group Watch Party',
   'ping_announcements': 'Store Announcements'
@@ -58,7 +52,7 @@ client.once('ready', async () => {
   const data = [
     {
       name: 'build-cloud9',
-      description: 'Amy wipes the server, builds all categories, channels, and role panels (Admin only)',
+      description: 'Amy wipes the server, builds all channels, rules, and completely separate role buttons (Admin only)',
     }
   ];
 
@@ -68,13 +62,13 @@ client.once('ready', async () => {
 // --- 3. Commands & Interactivity ---
 client.on('interactionCreate', async interaction => {
   try {
-    // --- FULL SERVER BUILD COMMAND ---
+    // --- FULL SERVER BUILD & RULES COMMAND ---
     if (interaction.isChatInputCommand() && interaction.commandName === 'build-cloud9') {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to let Amy remodel the store.', ephemeral: true });
       }
 
-      await interaction.reply({ content: '☕ Amy Sosa is clocking in, tearing down the old layout, and rebuilding Cloud 9 from scratch...', ephemeral: true });
+      await interaction.reply({ content: '☕ Amy Sosa is clocking in, tearing down the old layout, and rebuilding Cloud 9 from scratch with separate buttons and dedicated channels...', ephemeral: true });
       const guild = interaction.guild;
 
       // Wipe existing channels for a clean slate
@@ -126,7 +120,7 @@ client.on('interactionCreate', async interaction => {
       const helpDeskChannel = await guild.channels.create({ name: 'help-desk', type: ChannelType.GuildText, parent: supportCategory.id });
       await guild.channels.create({ name: 'support-chat', type: ChannelType.GuildText, parent: supportCategory.id });
 
-      // --- POPULATE ANNOUNCEMENTS EMBED ---
+      // --- POPULATE ANNOUNCEMENTS CHANNEL ---
       const announcementsEmbed = new EmbedBuilder()
         .setTitle('📢 Cloud 9 Store Announcements')
         .setDescription('Welcome to the official announcements board! Corporate updates, event reminders, and major store news will be posted here.')
@@ -134,56 +128,75 @@ client.on('interactionCreate', async interaction => {
         .setFooter({ text: 'Stay tuned for your next shift!' });
       await announcementsChannel.send({ embeds: [announcementsEmbed] });
 
-      // --- POPULATE RULES EMBED ---
+      // --- POPULATE RULES CHANNEL ---
       const rulesEmbed = new EmbedBuilder()
         .setTitle('📜 Cloud 9 Store Rules & Conduct')
-        .setDescription('Welcome to Cloud 9! Please follow these policies:')
+        .setDescription('Welcome to Cloud 9! To keep our store running smoothly, please follow these policies set by corporate:')
         .setColor(0x0055ff)
         .addFields(
-          { name: '1. Keep it respectful', value: 'No hate speech, harassment, or targeted bullying.' },
-          { name: '2. Keep channels on-topic', value: 'Post memes in the designated meme channel, show talk in seasons, etc.' },
-          { name: '3. No spamming', value: 'Do not flood chats or drop unauthorized invite links.' }
-        );
+          { name: '1. Keep it respectful', value: 'No hate speech, harassment, or targeted bullying of any kind. Treat fellow shoppers and employees like family.' },
+          { name: '2. Keep channels on-topic', value: 'Post memes in the designated meme channel, keep show discussions in the correct season channels, etc.' },
+          { name: '3. No spamming or advertising', value: 'Do not flood chats, drop unauthorized invite links, or self-promote without checking with management.' },
+          { name: '4. Watch Party Etiquette', value: 'Microphones are restricted to hosts/admins in the Watch Party stage so everyone can enjoy episodes peacefully.' }
+        )
+        .setFooter({ text: 'Failure to comply may result in a permanent shift termination by Glenn or Dina.' });
       await rulesChannel.send({ embeds: [rulesEmbed] });
 
-      // --- POPULATE CHARACTER SELECT BUTTONS (Row 1 & Row 2) ---
-      const charEmbed1 = new EmbedBuilder()
+      // --- POPULATE SEPARATE CHARACTER BUTTONS (Individual rows so every button is distinct and standalone) ---
+      const charEmbed = new EmbedBuilder()
         .setTitle('🛒 Cloud 9 Employee Shift - Character Selection')
-        .setDescription('*(Amy sighs)* "Click a button below to pick your character shift nametag. You can wear one main character at a time!"')
+        .setDescription('*(Amy sighs)* "Click your preferred character button below to grab your nametag. You can wear one main character persona at a time!"')
         .setColor(0x0055ff);
 
-      const rowChar1 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('char_amy').setLabel('Amy Sosa').setStyle(ButtonStyle.Primary).setEmoji('☕'),
-        new ButtonBuilder().setCustomId('char_jonah').setLabel('Jonah Simms').setStyle(ButtonStyle.Secondary).setEmoji('📚'),
-        new ButtonBuilder().setCustomId('char_dina').setLabel('Dina Fox').setStyle(ButtonStyle.Danger).setEmoji('🦅')
+      const rowAmy = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_amy').setLabel('Store Manager / Amy').setStyle(ButtonStyle.Primary).setEmoji('☕')
+      );
+      const rowJonah = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_jonah').setLabel('Floor Worker / Jonah').setStyle(ButtonStyle.Secondary).setEmoji('📚')
+      );
+      const rowDina = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_dina').setLabel('Security / Dina').setStyle(ButtonStyle.Danger).setEmoji('🦅')
+      );
+      const rowGlenn = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_glenn').setLabel('Assistant Manager / Glenn').setStyle(ButtonStyle.Success).setEmoji('😇')
+      );
+      const rowMateo = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_mateo').setLabel('Cloud 9 Stylist / Mateo').setStyle(ButtonStyle.Primary).setEmoji('💅')
+      );
+      const rowGarrett = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('char_garrett').setLabel('Photo Center / Garrett').setStyle(ButtonStyle.Secondary).setEmoji('🎧')
       );
 
-      const rowChar2 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('char_glenn').setLabel('Glenn Sturgis').setStyle(ButtonStyle.Success).setEmoji('😇'),
-        new ButtonBuilder().setCustomId('char_mateo').setLabel('Mateo Liwanag').setStyle(ButtonStyle.Primary).setEmoji('💅'),
-        new ButtonBuilder().setCustomId('char_garrett').setLabel('Garrett Keenan').setStyle(ButtonStyle.Secondary).setEmoji('🎧')
-      );
+      await rolesChannel.send({ 
+        embeds: [charEmbed], 
+        components: [rowAmy, rowJonah, rowDina, rowGlenn, rowMateo, rowGarrett] 
+      });
 
-      await rolesChannel.send({ embeds: [charEmbed1], components: [rowChar1, rowChar2] });
-
-      // --- POPULATE NOTIFICATION PINGS PANEL (Row 3) ---
+      // --- POPULATE SEPARATE NOTIFICATION PING BUTTONS (Individual standalone rows) ---
       const pingEmbed = new EmbedBuilder()
         .setTitle('🔔 Cloud 9 Notification Roles')
-        .setDescription('Click below to toggle your notification pings for watch parties and store announcements.')
+        .setDescription('Click the buttons below to toggle your notification pings for watch parties and store announcements.')
         .setColor(0x00aa00);
 
-      const rowPings = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ping_rewatch').setLabel('Re-watch Club').setStyle(ButtonStyle.Secondary).setEmoji('🔄'),
-        new ButtonBuilder().setCustomId('ping_groupwatch').setLabel('Group Watch Party').setStyle(ButtonStyle.Secondary).setEmoji('🍿'),
+      const rowRewatch = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ping_rewatch').setLabel('Re-watch Club').setStyle(ButtonStyle.Secondary).setEmoji('🔄')
+      );
+      const rowGroupwatch = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ping_groupwatch').setLabel('Group Watch Party').setStyle(ButtonStyle.Secondary).setEmoji('🍿')
+      );
+      const rowAnnounce = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('ping_announcements').setLabel('Store Announcements').setStyle(ButtonStyle.Secondary).setEmoji('📢')
       );
 
-      await rolesChannel.send({ embeds: [pingEmbed], components: [rowPings] });
+      await rolesChannel.send({ 
+        embeds: [pingEmbed], 
+        components: [rowRewatch, rowGroupwatch, rowAnnounce] 
+      });
 
       // --- POPULATE HELP DESK PANEL ---
       const ticketEmbed = new EmbedBuilder()
         .setTitle('🎫 Cloud 9 Customer Service & Support Desk')
-        .setDescription('Need help or have a complaint? Click the button below to open a private ticket.')
+        .setDescription('*(Garrett speaks into the PA)* "Need help or have a complaint? Click the button below to open a private ticket."')
         .setColor(0xffaa00);
 
       const ticketButton = new ActionRowBuilder().addComponents(
@@ -194,7 +207,7 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-    // --- HANDLE BUTTON CLICKS (Characters & Pings) ---
+    // --- HANDLE CHARACTER BUTTON CLICKS ---
     if (interaction.isButton() && interaction.customId.startsWith('char_')) {
       await interaction.deferReply({ ephemeral: true });
       const targetRoleName = roleNames[interaction.customId];
@@ -208,7 +221,7 @@ client.on('interactionCreate', async interaction => {
         });
       }
 
-      // Remove other character roles so they only hold one active persona
+      // Enforce single active character role
       for (const key of Object.keys(roleNames)) {
         if (key.startsWith('char_')) {
           const rName = roleNames[key];
@@ -223,6 +236,7 @@ client.on('interactionCreate', async interaction => {
       return interaction.editReply({ content: `Shift assigned! You are now rocking the character role: **${targetRoleName}**.` });
     }
 
+    // --- HANDLE PING BUTTON CLICKS ---
     if (interaction.isButton() && interaction.customId.startsWith('ping_')) {
       await interaction.deferReply({ ephemeral: true });
       const targetRoleName = roleNames[interaction.customId];
