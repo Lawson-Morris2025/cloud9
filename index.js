@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('🛒 Amy Sosa & Cloud 9 Server Builder Bot is online!');
+  res.send('🛒 Amy Sosa & Cloud 9 Bot is online and ready!');
 });
 
 app.listen(PORT, () => {
@@ -32,7 +32,7 @@ const client = new Client({
 });
 
 const roleNames = {
-  // Characters (Each gets their own separate button)
+  // Character Roles
   'char_amy': 'Store Manager / Amy',
   'char_jonah': 'Floor Worker / Jonah',
   'char_dina': 'Security / Dina',
@@ -40,7 +40,7 @@ const roleNames = {
   'char_mateo': 'Cloud 9 Stylist / Mateo',
   'char_garrett': 'Photo Center / Garrett',
   
-  // Notification Pings (Each gets their own separate button)
+  // Self-Role / Notification Pings
   'ping_rewatch': 'Re-watch Club',
   'ping_groupwatch': 'Group Watch Party',
   'ping_announcements': 'Store Announcements'
@@ -52,7 +52,7 @@ client.once('ready', async () => {
   const data = [
     {
       name: 'build-cloud9',
-      description: 'Amy wipes the server, builds all channels, rules, and completely separate role buttons (Admin only)',
+      description: 'Amy wipes the server, creates all channels, writes the rules, and sets up separate character/self-role buttons (Admin only)',
     }
   ];
 
@@ -62,13 +62,13 @@ client.once('ready', async () => {
 // --- 3. Commands & Interactivity ---
 client.on('interactionCreate', async interaction => {
   try {
-    // --- FULL SERVER BUILD & RULES COMMAND ---
+    // --- FULL SERVER BUILD & CHANNEL POPULATION COMMAND ---
     if (interaction.isChatInputCommand() && interaction.commandName === 'build-cloud9') {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         return interaction.reply({ content: 'Nice try, corporate. You need Administrator permissions to let Amy remodel the store.', ephemeral: true });
       }
 
-      await interaction.reply({ content: '☕ Amy Sosa is clocking in, tearing down the old layout, and rebuilding Cloud 9 from scratch with separate buttons and dedicated channels...', ephemeral: true });
+      await interaction.reply({ content: '☕ Amy Sosa is clocking in, wiping the old layout, and fully building out the server, channels, rules, and individual buttons...', ephemeral: true });
       const guild = interaction.guild;
 
       // Wipe existing channels for a clean slate
@@ -81,7 +81,7 @@ client.on('interactionCreate', async interaction => {
       const dirCategory = await guild.channels.create({ name: '📢 CLOUD 9 DIRECTORY', type: ChannelType.GuildCategory });
       const announcementsChannel = await guild.channels.create({ name: 'announcements', type: ChannelType.GuildText, parent: dirCategory.id });
       const rulesChannel = await guild.channels.create({ name: 'rules-and-info', type: ChannelType.GuildText, parent: dirCategory.id });
-      await guild.channels.create({ name: 'welcome', type: ChannelType.GuildText, parent: dirCategory.id });
+      const welcomeChannel = await guild.channels.create({ name: 'welcome', type: ChannelType.GuildText, parent: dirCategory.id });
       const rolesChannel = await guild.channels.create({ name: 'employee-onboarding', type: ChannelType.GuildText, parent: dirCategory.id });
 
       // --- CATEGORY 2: CLOUD 9 FLOOR ---
@@ -120,7 +120,7 @@ client.on('interactionCreate', async interaction => {
       const helpDeskChannel = await guild.channels.create({ name: 'help-desk', type: ChannelType.GuildText, parent: supportCategory.id });
       await guild.channels.create({ name: 'support-chat', type: ChannelType.GuildText, parent: supportCategory.id });
 
-      // --- POPULATE ANNOUNCEMENTS CHANNEL ---
+      // --- 1. WRITE INTO THE ANNOUNCEMENTS CHANNEL ---
       const announcementsEmbed = new EmbedBuilder()
         .setTitle('📢 Cloud 9 Store Announcements')
         .setDescription('Welcome to the official announcements board! Corporate updates, event reminders, and major store news will be posted here.')
@@ -128,7 +128,7 @@ client.on('interactionCreate', async interaction => {
         .setFooter({ text: 'Stay tuned for your next shift!' });
       await announcementsChannel.send({ embeds: [announcementsEmbed] });
 
-      // --- POPULATE RULES CHANNEL ---
+      // --- 2. WRITE INTO THE RULES CHANNEL ---
       const rulesEmbed = new EmbedBuilder()
         .setTitle('📜 Cloud 9 Store Rules & Conduct')
         .setDescription('Welcome to Cloud 9! To keep our store running smoothly, please follow these policies set by corporate:')
@@ -142,7 +142,14 @@ client.on('interactionCreate', async interaction => {
         .setFooter({ text: 'Failure to comply may result in a permanent shift termination by Glenn or Dina.' });
       await rulesChannel.send({ embeds: [rulesEmbed] });
 
-      // --- POPULATE SEPARATE CHARACTER BUTTONS (Individual rows so every button is distinct and standalone) ---
+      // --- 3. WRITE WELCOME MESSAGE ---
+      const welcomeEmbed = new EmbedBuilder()
+        .setTitle('🛒 Welcome to Cloud 9!')
+        .setDescription('Grab a cart, head over to **#employee-onboarding** to pick your character and notification self-roles, and try not to break anything in aisle 4!')
+        .setColor(0x0055ff);
+      await welcomeChannel.send({ embeds: [welcomeEmbed] });
+
+      // --- 4. WRITE SEPARATE CHARACTER BUTTONS (Individual Rows) ---
       const charEmbed = new EmbedBuilder()
         .setTitle('🛒 Cloud 9 Employee Shift - Character Selection')
         .setDescription('*(Amy sighs)* "Click your preferred character button below to grab your nametag. You can wear one main character persona at a time!"')
@@ -172,10 +179,10 @@ client.on('interactionCreate', async interaction => {
         components: [rowAmy, rowJonah, rowDina, rowGlenn, rowMateo, rowGarrett] 
       });
 
-      // --- POPULATE SEPARATE NOTIFICATION PING BUTTONS (Individual standalone rows) ---
+      // --- 5. WRITE SEPARATE SELF-ROLE / PING BUTTONS (Individual Rows) ---
       const pingEmbed = new EmbedBuilder()
-        .setTitle('🔔 Cloud 9 Notification Roles')
-        .setDescription('Click the buttons below to toggle your notification pings for watch parties and store announcements.')
+        .setTitle('🔔 Cloud 9 Self-Roles & Notification Pings')
+        .setDescription('Click the individual buttons below to toggle your notification pings!')
         .setColor(0x00aa00);
 
       const rowRewatch = new ActionRowBuilder().addComponents(
@@ -193,7 +200,7 @@ client.on('interactionCreate', async interaction => {
         components: [rowRewatch, rowGroupwatch, rowAnnounce] 
       });
 
-      // --- POPULATE HELP DESK PANEL ---
+      // --- 6. WRITE HELP DESK TICKET PANEL ---
       const ticketEmbed = new EmbedBuilder()
         .setTitle('🎫 Cloud 9 Customer Service & Support Desk')
         .setDescription('*(Garrett speaks into the PA)* "Need help or have a complaint? Click the button below to open a private ticket."')
@@ -236,7 +243,7 @@ client.on('interactionCreate', async interaction => {
       return interaction.editReply({ content: `Shift assigned! You are now rocking the character role: **${targetRoleName}**.` });
     }
 
-    // --- HANDLE PING BUTTON CLICKS ---
+    // --- HANDLE SELF-ROLE PING BUTTON CLICKS ---
     if (interaction.isButton() && interaction.customId.startsWith('ping_')) {
       await interaction.deferReply({ ephemeral: true });
       const targetRoleName = roleNames[interaction.customId];
